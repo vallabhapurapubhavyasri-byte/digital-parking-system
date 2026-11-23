@@ -41,13 +41,13 @@
         /* 1. LOGIN SCREEN */
         .login-container { width: 100%; display: flex; justify-content: center; align-items: center; background: #f8fafc; }
         .login-box {
-            background: #fff; width: 420px; padding: 35px 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            background: #fff; width: 440px; padding: 35px 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             border: 1px solid #e2e8f0;
         }
-        .login-header { text-align: center; margin-bottom: 25px; }
+        .login-header { text-align: center; margin-bottom: 22px; }
         .login-header h2 { font-size: 18px; color: #1e293b; margin-bottom: 5px; }
         .login-header p { font-size: 12px; color: #64748b; }
-        .form-group { margin-bottom: 16px; }
+        .form-group { margin-bottom: 14px; }
         .form-group label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
         .form-group input, .form-group select {
             width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;
@@ -58,7 +58,7 @@
         }
         .btn-primary:hover { background: #0369a1; }
         .login-hint {
-            margin-top: 20px; background: #f1f5f9; padding: 10px; border-radius: 4px; font-size: 11px; color: #475569; text-align: center; line-height: 1.6;
+            margin-top: 15px; background: #f1f5f9; padding: 10px; border-radius: 4px; font-size: 11px; color: #475569; text-align: center; line-height: 1.5;
         }
 
         /* 2. DASHBOARD & INNER SCREENS */
@@ -134,21 +134,26 @@
                     <div class="login-box">
                         <div class="login-header">
                             <h2>PARKING ENFORCEMENT PORTAL</h2>
-                            <p>Enter your credentials to access the system</p>
+                            <p>Login with any account or create your own custom login</p>
                         </div>
                         <div class="form-group">
-                            <label>Username / Officer ID:</label>
-                            <input type="text" id="login-user" value="admin">
+                            <label>Username / Officer Name:</label>
+                            <input type="text" id="login-user" value="admin" placeholder="Type ANY username (e.g. your name)">
                         </div>
                         <div class="form-group">
                             <label>Password:</label>
-                            <input type="password" id="login-pass" value="admin123">
+                            <input type="password" id="login-pass" value="admin123" placeholder="Type ANY password">
+                        </div>
+                        <div class="form-group">
+                            <label>Select Role:</label>
+                            <select id="login-role">
+                                <option value="ADMIN">System Administrator (Full Access & Reports)</option>
+                                <option value="OFFICER">Traffic Police Officer (Violation Enforcement)</option>
+                            </select>
                         </div>
                         <button class="btn-primary" onclick="handleLogin()">Login to System</button>
                         <div class="login-hint">
-                            <strong>Demo Credentials:</strong><br>
-                            Admin: <code>admin</code> / <code>admin123</code><br>
-                            Traffic Officer: <code>officer_raj</code> / <code>pass123</code>
+                            ✨ <strong>Pro-Tip:</strong> You can type <strong>ANY username and password</strong> you like (e.g. your own name), select a role, and click Login!
                         </div>
                     </div>
                 </div>
@@ -167,7 +172,7 @@
                         <div class="nav-item" style="margin-top: auto; color:#f87171;" onclick="handleLogout()">🚪 Logout</div>
                     </div>
                     <div class="content-area">
-                        <h2 style="font-size: 20px; color:#1e293b; margin-bottom: 4px;">Executive Traffic Overview</h2>
+                        <h2 style="font-size: 20px; color:#1e293b; margin-bottom: 4px;" id="welcome-msg">Executive Traffic Overview</h2>
                         <p style="font-size: 12px; color:#64748b; margin-bottom: 20px;">Synchronized live metrics with MySQL database</p>
 
                         <div class="cards-grid">
@@ -457,12 +462,21 @@
         function handleLogin() {
             const u = document.getElementById('login-user').value.trim();
             const p = document.getElementById('login-pass').value.trim();
-            if ((u === 'admin' && p === 'admin123') || (u === 'officer_raj' && p === 'pass123')) {
-                alert('Login Successful! Welcome ' + u);
-                document.getElementById('top-user-status').innerText = 'User: ' + u + ' (' + (u === 'admin' ? 'ADMIN' : 'OFFICER') + ')';
-                showScreen('screen-dash');
+            const r = document.getElementById('login-role').value;
+
+            if (!u || !p) {
+                alert('Please enter both username and password!');
+                return;
+            }
+
+            alert('Login Successful! Welcome ' + u + ' [' + r + ']');
+            document.getElementById('top-user-status').innerText = 'User: ' + u + ' (' + r + ')';
+            document.getElementById('welcome-msg').innerText = 'Welcome back, ' + u + ' (' + r + ')';
+
+            if (r === 'OFFICER') {
+                showScreen('screen-violations'); // Route officer straight to ticketing
             } else {
-                alert('Invalid credentials! Try admin / admin123');
+                showScreen('screen-dash'); // Route admin to executive dashboard
             }
         }
 
