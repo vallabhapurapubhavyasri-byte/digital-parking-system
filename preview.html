@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Parking Violation System - Interactive Chrome Preview</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #0f172a; color: #1e293b; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Top Browser Notice Banner */
+        .preview-banner {
+            background: #1e293b; color: #94a3b8; padding: 10px 20px; font-size: 13px;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;
+        }
+        .preview-banner strong { color: #38bdf8; }
+        .tab-btn { background: #334155; color: #f1f5f9; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 5px; }
+        .tab-btn.active { background: #0284c7; font-weight: bold; }
+
+        /* Window Simulation Canvas */
+        .window-canvas {
+            flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Simulated Java Swing Window Frame */
+        .swing-frame {
+            background: #fff; width: 1050px; height: 680px; border-radius: 8px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; overflow: hidden; border: 1px solid #cbd5e1;
+        }
+        .window-titlebar {
+            background: #182b49; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .window-title { font-weight: bold; font-size: 15px; letter-spacing: 0.5px; }
+        .user-status { font-size: 12px; color: #93c5fd; }
+
+        /* Screen Views */
+        .screen { display: none; flex: 1; height: calc(100% - 50px); overflow: hidden; }
+        .screen.active { display: flex; }
+
+        /* 1. LOGIN SCREEN */
+        .login-container { width: 100%; display: flex; justify-content: center; align-items: center; background: #f8fafc; }
+        .login-box {
+            background: #fff; width: 420px; padding: 35px 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        .login-header { text-align: center; margin-bottom: 25px; }
+        .login-header h2 { font-size: 18px; color: #1e293b; margin-bottom: 5px; }
+        .login-header p { font-size: 12px; color: #64748b; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;
+        }
+        .btn-primary {
+            width: 100%; padding: 10px; background: #0284c7; color: #fff; border: none; border-radius: 4px;
+            font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .btn-primary:hover { background: #0369a1; }
+        .login-hint {
+            margin-top: 20px; background: #f1f5f9; padding: 10px; border-radius: 4px; font-size: 11px; color: #475569; text-align: center; line-height: 1.6;
+        }
+
+        /* 2. DASHBOARD & INNER SCREENS */
+        .app-body { display: flex; width: 100%; height: 100%; }
+        .sidebar {
+            width: 230px; background: #212529; color: #f8fafc; padding: 20px 12px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .sidebar-heading { font-size: 10px; color: #94a3b8; font-weight: bold; margin-bottom: 10px; padding-left: 8px; }
+        .nav-item {
+            padding: 10px 12px; border-radius: 5px; color: #cbd5e1; font-size: 13px; text-decoration: none; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .nav-item:hover, .nav-item.active { background: #334155; color: #fff; }
+        .content-area { flex: 1; background: #f8fafc; padding: 20px; overflow-y: auto; }
+
+        /* Metric Cards */
+        .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        .metric-card {
+            padding: 18px; border-radius: 6px; border: 1px solid; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .metric-title { font-size: 11px; font-weight: bold; margin-bottom: 8px; }
+        .metric-value { font-size: 30px; font-weight: bold; margin-bottom: 4px; }
+        .metric-sub { font-size: 11px; color: #64748b; }
+
+        /* Tables & Forms */
+        .table-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        th { background: #f1f5f9; padding: 10px 12px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; color: #475569; }
+        tr:hover { background: #f8fafc; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+        .badge-pending { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+        .badge-paid { background: #ecfdf5; color: #16a34a; border: 1px solid #86efac; }
+
+        /* Modal Receipt */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+        .receipt-paper {
+            background: #fffdf5; width: 440px; padding: 25px; border-radius: 6px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #1e293b; border: 1px solid #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Preview Navigator -->
+    <div class="preview-banner">
+        <div><strong>Google Chrome Live Preview:</strong> Digital Parking Violation & Fine System</div>
+        <div>
+            Switch Views:
+            <button class="tab-btn active" onclick="showScreen('screen-login')">1. Login</button>
+            <button class="tab-btn" onclick="showScreen('screen-dash')">2. Dashboard</button>
+            <button class="tab-btn" onclick="showScreen('screen-vehicles')">3. Vehicle Registry</button>
+            <button class="tab-btn" onclick="showScreen('screen-violations')">4. Issue Ticket</button>
+            <button class="tab-btn" onclick="showScreen('screen-payments')">5. Settle Fine</button>
+            <button class="tab-btn" onclick="showScreen('screen-reports')">6. Reports</button>
+        </div>
+    </div>
+
+    <!-- Simulated Swing Window -->
+    <div class="window-canvas">
+        <div class="swing-frame">
+            <div class="window-titlebar">
+                <span class="window-title" id="top-title">DIGITAL PARKING VIOLATION & FINE SYSTEM</span>
+                <span class="user-status" id="top-user-status">Role: Logged Out</span>
+            </div>
+
+            <!-- 1. LOGIN SCREEN -->
+            <div id="screen-login" class="screen active">
+                <div class="login-container">
+                    <div class="login-box">
+                        <div class="login-header">
+                            <h2>PARKING ENFORCEMENT PORTAL</h2>
+                            <p>Enter your credentials to access the system</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Username / Officer ID:</label>
+                            <input type="text" id="login-user" value="admin">
+                        </div>
+                        <div class="form-group">
+                            <label>Password:</label>
+                            <input type="password" id="login-pass" value="admin123">
+                        </div>
+                        <button class="btn-primary" onclick="handleLogin()">Login to System</button>
+                        <div class="login-hint">
+                            <strong>Demo Credentials:</strong><br>
+                            Admin: <code>admin</code> / <code>admin123</code><br>
+                            Traffic Officer: <code>officer_raj</code> / <code>pass123</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. DASHBOARD SCREEN -->
+            <div id="screen-dash" class="screen">
+                <div class="app-body">
+                    <div class="sidebar">
+                        <div class="sidebar-heading">NAVIGATION MENU</div>
+                        <div class="nav-item active" onclick="showScreen('screen-dash')">📊 Overview</div>
+                        <div class="nav-item" onclick="showScreen('screen-vehicles')">🚗 Vehicles</div>
+                        <div class="nav-item" onclick="showScreen('screen-violations')">📝 Issue Ticket</div>
+                        <div class="nav-item" onclick="showScreen('screen-payments')">💳 Settle Fine</div>
+                        <div class="nav-item" onclick="showScreen('screen-reports')">📈 Reports</div>
+                        <div class="nav-item" style="margin-top: auto; color:#f87171;" onclick="handleLogout()">🚪 Logout</div>
+                    </div>
+                    <div class="content-area">
+                        <h2 style="font-size: 20px; color:#1e293b; margin-bottom: 4px;">Executive Traffic Overview</h2>
+                        <p style="font-size: 12px; color:#64748b; margin-bottom: 20px;">Synchronized live metrics with MySQL database</p>
+
+                        <div class="cards-grid">
+                            <div class="metric-card" style="background:#eff6ff; border-color:#2563eb;">
+                                <div class="metric-title" style="color:#2563eb;">REGISTERED VEHICLES</div>
+                                <div class="metric-value" style="color:#1d4ed8;" id="dash-veh-count">5</div>
+                                <div class="metric-sub">Active registered motor vehicles</div>
+                            </div>
+                            <div class="metric-card" style="background:#fef3c7; border-color:#d97706;">
+                                <div class="metric-title" style="color:#d97706;">TOTAL VIOLATIONS ISSUED</div>
+                                <div class="metric-value" style="color:#b45309;" id="dash-viol-count">3</div>
+                                <div class="metric-sub">Cumulative traffic infractions</div>
+                            </div>
+                            <div class="metric-card" style="background:#ecfdf5; border-color:#10b981;">
+                                <div class="metric-title" style="color:#10b981;">REVENUE COLLECTED</div>
+                                <div class="metric-value" style="color:#047857;" id="dash-rev-val">₹500.00</div>
+                                <div class="metric-sub">Settled fines via UPI & Cash</div>
+                            </div>
+                            <div class="metric-card" style="background:#fef2f2; border-color:#ef4444;">
+                                <div class="metric-title" style="color:#ef4444;">PENDING UNSETTLED FINES</div>
+                                <div class="metric-value" style="color:#b91c1c;" id="dash-pend-val">₹1,100.00</div>
+                                <div class="metric-sub">Outstanding violation penalties</div>
+                            </div>
+                        </div>
+
+                        <div style="background:#fff; border:1px solid #e2e8f0; padding:15px; border-radius:6px;">
+                            <h4 style="font-size:13px; margin-bottom:10px;">Quick System Actions:</h4>
+                            <button class="tab-btn" style="background:#2563eb;" onclick="showScreen('screen-vehicles')">+ Register New Vehicle</button>
+                            <button class="tab-btn" style="background:#dc2626;" onclick="showScreen('screen-violations')">🚨 Record Violation</button>
+                            <button class="tab-btn" style="background:#16a34a;" onclick="showScreen('screen-payments')">💳 Clear Dues & Print Receipt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. VEHICLE REGISTRY -->
+            <div id="screen-vehicles" class="screen">
+                <div class="app-body">
+                    <div class="sidebar">
+                        <div class="sidebar-heading">NAVIGATION MENU</div>
+                        <div class="nav-item" onclick="showScreen('screen-dash')">📊 Overview</div>
+                        <div class="nav-item active" onclick="showScreen('screen-vehicles')">🚗 Vehicles</div>
+                        <div class="nav-item" onclick="showScreen('screen-violations')">📝 Issue Ticket</div>
+                        <div class="nav-item" onclick="showScreen('screen-payments')">💳 Settle Fine</div>
+                        <div class="nav-item" onclick="showScreen('screen-reports')">📈 Reports</div>
+                        <div class="nav-item" style="margin-top: auto; color:#f87171;" onclick="handleLogout()">🚪 Logout</div>
+                    </div>
+                    <div class="content-area" style="display: flex; gap: 15px;">
+                        <!-- Form -->
+                        <div style="width: 320px; background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px;">
+                            <h3 style="font-size: 14px; margin-bottom: 12px;">Add Vehicle</h3>
+                            <div class="form-group">
+                                <label>Plate Number:</label>
+                                <input type="text" id="v-plate" placeholder="e.g. KA-01-AB-1234">
+                            </div>
+                            <div class="form-group">
+                                <label>Owner Name:</label>
+                                <input type="text" id="v-owner" placeholder="Full Name">
+                            </div>
+                            <div class="form-group">
+                                <label>Vehicle Category:</label>
+                                <select id="v-type"><option>Car</option><option>Bike</option><option>Truck</option><option>Bus</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number:</label>
+                                <input type="text" id="v-contact" placeholder="98XXXXXXXX">
+                            </div>
+                            <button class="btn-primary" onclick="addVehicle()">Add to Registry</button>
+                        </div>
+                        <!-- Table -->
+                        <div style="flex:1;">
+                            <h3 style="font-size: 14px; margin-bottom: 10px;">Registered Vehicles Registry</h3>
+                            <div class="table-wrap">
+                                <table id="vehicle-table">
+                                    <thead><tr><th>ID</th><th>Plate</th><th>Owner</th><th>Type</th><th>Contact</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>1</td><td><strong>KA-01-MJ-2024</strong></td><td>Rahul Sharma</td><td>Car</td><td>9876500001</td></tr>
+                                        <tr><td>2</td><td><strong>MH-12-PQ-4589</strong></td><td>Ananya Verma</td><td>Car</td><td>9876500002</td></tr>
+                                        <tr><td>3</td><td><strong>DL-03-TC-9012</strong></td><td>Vikram Patil</td><td>Bike</td><td>9876500003</td></tr>
+                                        <tr><td>4</td><td><strong>TN-09-BK-3344</strong></td><td>Karthik Raman</td><td>Car</td><td>9876500004</td></tr>
+                                        <tr><td>5</td><td><strong>KA-05-XY-7788</strong></td><td>Suresh Reddy</td><td>Truck</td><td>9876500005</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. VIOLATIONS SCREEN -->
+            <div id="screen-violations" class="screen">
+                <div class="app-body">
+                    <div class="sidebar">
+                        <div class="sidebar-heading">NAVIGATION MENU</div>
+                        <div class="nav-item" onclick="showScreen('screen-dash')">📊 Overview</div>
+                        <div class="nav-item" onclick="showScreen('screen-vehicles')">🚗 Vehicles</div>
+                        <div class="nav-item active" onclick="showScreen('screen-violations')">📝 Issue Ticket</div>
+                        <div class="nav-item" onclick="showScreen('screen-payments')">💳 Settle Fine</div>
+                        <div class="nav-item" onclick="showScreen('screen-reports')">📈 Reports</div>
+                        <div class="nav-item" style="margin-top: auto; color:#f87171;" onclick="handleLogout()">🚪 Logout</div>
+                    </div>
+                    <div class="content-area" style="display: flex; gap: 15px;">
+                        <div style="width: 340px; background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px;">
+                            <h3 style="font-size: 14px; margin-bottom: 12px; color:#b91c1c;">🚨 Issue Violation Ticket</h3>
+                            <div class="form-group">
+                                <label>Vehicle Plate:</label>
+                                <input type="text" id="viol-plate" value="MH-12-PQ-4589">
+                            </div>
+                            <div class="form-group">
+                                <label>Violation Type:</label>
+                                <select id="viol-type" onchange="updateFine()">
+                                    <option value="500">No Parking Zone (₹500)</option>
+                                    <option value="500">Parking on Footpath (₹500)</option>
+                                    <option value="300">Wrong Side Parking (₹300)</option>
+                                    <option value="400">Blocking Entrance (₹400)</option>
+                                    <option value="600">Double Parking (₹600)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Calculated Fine Tariff:</label>
+                                <input type="text" id="viol-fine" value="₹500.00" readonly style="font-weight:bold; color:#dc2626; background:#fef2f2;">
+                            </div>
+                            <div class="form-group">
+                                <label>Location:</label>
+                                <input type="text" id="viol-loc" value="Indiranagar 100ft Road">
+                            </div>
+                            <button class="btn-primary" style="background:#dc2626;" onclick="issueTicket()">Issue Violation Ticket</button>
+                        </div>
+                        <div style="flex:1;">
+                            <h3 style="font-size: 14px; margin-bottom: 10px;">Active Violations Queue</h3>
+                            <div class="table-wrap">
+                                <table id="viol-table">
+                                    <thead><tr><th>#</th><th>Plate</th><th>Infraction</th><th>Fine</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>1</td><td>KA-01-MJ-2024</td><td>No Parking Zone</td><td>₹500.00</td><td><span class="badge badge-paid">PAID</span></td></tr>
+                                        <tr><td>2</td><td>MH-12-PQ-4589</td><td>Parking on Footpath</td><td>₹500.00</td><td><span class="badge badge-pending">PENDING</span></td></tr>
+                                        <tr><td>3</td><td>DL-03-TC-9012</td><td>Double Parking</td><td>₹600.00</td><td><span class="badge badge-pending">PENDING</span></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. PAYMENTS SCREEN -->
+            <div id="screen-payments" class="screen">
+                <div class="app-body">
+                    <div class="sidebar">
+                        <div class="sidebar-heading">NAVIGATION MENU</div>
+                        <div class="nav-item" onclick="showScreen('screen-dash')">📊 Overview</div>
+                        <div class="nav-item" onclick="showScreen('screen-vehicles')">🚗 Vehicles</div>
+                        <div class="nav-item" onclick="showScreen('screen-violations')">📝 Issue Ticket</div>
+                        <div class="nav-item active" onclick="showScreen('screen-payments')">💳 Settle Fine</div>
+                        <div class="nav-item" onclick="showScreen('screen-reports')">📈 Reports</div>
+                        <div class="nav-item" style="margin-top: auto; color:#f87171;" onclick="handleLogout()">🚪 Logout</div>
+                    </div>
+                    <div class="content-area" style="display: flex; gap: 15px;">
+                        <div style="flex:1;">
+                            <h3 style="font-size: 14px; margin-bottom: 10px;">Select Pending Ticket to Settle</h3>
+                            <div class="table-wrap">
+                                <table>
+                                    <thead><tr><th>Ticket</th><th>Plate</th><th>Infraction</th><th>Due</th><th>Action</th></tr></thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>#2</td><td><strong>MH-12-PQ-4589</strong></td><td>Parking on Footpath</td><td>₹500.00</td>
+                                            <td><button class="tab-btn" style="background:#16a34a;" onclick="selectPayment(2, 'MH-12-PQ-4589', 'Parking on Footpath', 500)">Select</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td>#3</td><td><strong>DL-03-TC-9012</strong></td><td>Double Parking</td><td>₹600.00</td>
+                                            <td><button class="tab-btn" style="background:#16a34a;" onclick="selectPayment(3, 'DL-03-TC-9012', 'Double Parking', 600)">Select</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div style="width: 320px; background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px;">
+                            <h3 style="font-size: 14px; margin-bottom: 12px; color:#16a34a;">Fine Settlement Checkout</h3>
+                            <p style="font-size: 12px; color:#64748b; margin-bottom: 8px;">Selected: <strong id="pay-ticket-info">Ticket #2 (MH-12-PQ-4589)</strong></p>
+                            <div style="font-size: 26px; font-weight:bold; color:#16a34a; margin-bottom: 15px;" id="pay-amount-info">₹500.00</div>
+                            <div class="form-group">
+                                <label>Payment Method:</label>
+                                <select id="pay-method"><option>UPI (GPay / PhonePe)</option><option>CASH</option><option>CREDIT CARD</option></select>
+                            </div>
+                            <button class="btn-primary" style="background:#16a34a;" onclick="processPayment()">Settle & Generate Receipt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. REPORTS SCREEN -->
+            <div id="screen-reports" class="screen">
+                <div class="app-body">
+                    <div class="sidebar">
+                        <div class="sidebar-heading">NAVIGATION MENU</div>
+                        <div class="nav-item" onclick="showScreen('screen-dash')">📊 Overview</div>
+                        <div class="nav-item" onclick="showScreen('screen-vehicles')">🚗 Vehicles</div>
+                        <div class="nav-item" onclick="showScreen('screen-violations')">📝 Issue Ticket</div>
+                        <div class="nav-item" onclick="showScreen('screen-payments')">💳 Settle Fine</div>
+                        <div class="nav-item active" onclick="showScreen('screen-reports')">📈 Reports</div>
+                        <div class="nav-item" style="margin-top: auto; color:#f87171;" onclick="handleLogout()">🚪 Logout</div>
+                    </div>
+                    <div class="content-area">
+                        <h2 style="font-size: 18px; margin-bottom: 15px;">System Audit & Category Breakdown</h2>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="table-wrap" style="margin: 0; padding:10px;">
+                                <h4 style="margin-bottom:8px;">Violations by Category</h4>
+                                <table>
+                                    <thead><tr><th>Offense</th><th>Count</th><th>Share</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>No Parking Zone</td><td>1</td><td>33.3%</td></tr>
+                                        <tr><td>Parking on Footpath</td><td>1</td><td>33.3%</td></tr>
+                                        <tr><td>Double Parking</td><td>1</td><td>33.3%</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="table-wrap" style="margin: 0; padding:10px;">
+                                <h4 style="margin-bottom:8px;">Revenue by Method</h4>
+                                <table>
+                                    <thead><tr><th>Method</th><th>Collected</th><th>Share</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>UPI (PhonePe / GPay)</td><td>₹500.00</td><td>100.0%</td></tr>
+                                        <tr><td>Cash Collection</td><td>₹0.00</td><td>0.0%</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Digital Receipt -->
+    <div class="modal-overlay" id="receipt-modal">
+        <div class="receipt-paper">
+            <div style="text-align:center; font-weight:bold; margin-bottom:10px;">
+                ====================================================<br>
+                DIGITAL TRAFFIC ENFORCEMENT AUTHORITY<br>
+                OFFICIAL FINE SETTLEMENT RECEIPT<br>
+                ====================================================
+            </div>
+            <div>Receipt No  : <strong id="rec-no">REC-20261123-002</strong></div>
+            <div>Timestamp   : <span>23-Nov-2026 10:14:22 PM</span></div>
+            <div>Status      : <strong style="color:#16a34a;">[ PAID - DUES CLEARED ]</strong></div>
+            <div style="margin: 8px 0; border-top:1px dashed #64748b;"></div>
+            <div>Vehicle No  : <span id="rec-plate">MH-12-PQ-4589</span></div>
+            <div>Offense     : <span id="rec-offense">Parking on Footpath</span></div>
+            <div>Amount Paid : <strong id="rec-amt">₹500.00</strong></div>
+            <div>Payment Mode: <span id="rec-mode">UPI</span></div>
+            <div style="margin: 8px 0; border-top:1px dashed #64748b;"></div>
+            <div style="text-align:center; font-size:10px; color:#64748b; margin-top:10px;">
+                Thank you for clearing your traffic fine.<br>
+                This is a verified computer-generated challan.
+            </div>
+            <div style="margin-top:15px; display:flex; gap:10px;">
+                <button class="btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+                <button class="tab-btn" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPayingTicket = { id: 2, plate: 'MH-12-PQ-4589', offense: 'Parking on Footpath', amount: 500 };
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            const target = document.getElementById(screenId);
+            if (target) target.classList.add('active');
+
+            // Update top bar title
+            const titles = {
+                'screen-login': 'LOGIN - DIGITAL PARKING VIOLATION SYSTEM',
+                'screen-dash': 'ADMIN DASHBOARD - EXECUTIVE OVERVIEW',
+                'screen-vehicles': 'VEHICLE REGISTRY & RECORDS MANAGEMENT',
+                'screen-violations': 'RECORD TRAFFIC VIOLATION & ISSUE TICKET',
+                'screen-payments': 'FINE PAYMENT & DIGITAL RECEIPT ISSUANCE',
+                'screen-reports': 'SYSTEM AUDIT & TRAFFIC ANALYTICS'
+            };
+            document.getElementById('top-title').innerText = titles[screenId] || 'DIGITAL PARKING SYSTEM';
+        }
+
+        function handleLogin() {
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value.trim();
+            if ((u === 'admin' && p === 'admin123') || (u === 'officer_raj' && p === 'pass123')) {
+                alert('Login Successful! Welcome ' + u);
+                document.getElementById('top-user-status').innerText = 'User: ' + u + ' (' + (u === 'admin' ? 'ADMIN' : 'OFFICER') + ')';
+                showScreen('screen-dash');
+            } else {
+                alert('Invalid credentials! Try admin / admin123');
+            }
+        }
+
+        function handleLogout() {
+            document.getElementById('top-user-status').innerText = 'Role: Logged Out';
+            showScreen('screen-login');
+        }
+
+        function updateFine() {
+            const val = document.getElementById('viol-type').value;
+            document.getElementById('viol-fine').value = '₹' + parseFloat(val).toFixed(2);
+        }
+
+        function addVehicle() {
+            const plate = document.getElementById('v-plate').value.trim();
+            const owner = document.getElementById('v-owner').value.trim();
+            const type = document.getElementById('v-type').value;
+            const contact = document.getElementById('v-contact').value.trim();
+            if (!plate || !owner) return alert('Please enter plate and owner name!');
+
+            const table = document.getElementById('vehicle-table').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            newRow.innerHTML = `<td>6</td><td><strong>${plate.toUpperCase()}</strong></td><td>${owner}</td><td>${type}</td><td>${contact || '9876543210'}</td>`;
+            alert('Vehicle registered successfully!');
+            document.getElementById('dash-veh-count').innerText = '6';
+        }
+
+        function issueTicket() {
+            const plate = document.getElementById('viol-plate').value.trim();
+            const typeSelect = document.getElementById('viol-type');
+            const offense = typeSelect.options[typeSelect.selectedIndex].text;
+            const fine = document.getElementById('viol-fine').value;
+
+            const table = document.getElementById('viol-table').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            newRow.innerHTML = `<td>4</td><td>${plate}</td><td>${offense}</td><td>${fine}</td><td><span class="badge badge-pending">PENDING</span></td>`;
+            alert('Violation Ticket Issued to ' + plate + ' for ' + fine);
+            document.getElementById('dash-viol-count').innerText = '4';
+            document.getElementById('dash-pend-val').innerText = '₹1,600.00';
+        }
+
+        function selectPayment(id, plate, offense, amount) {
+            currentPayingTicket = { id, plate, offense, amount };
+            document.getElementById('pay-ticket-info').innerText = `Ticket #${id} (${plate})`;
+            document.getElementById('pay-amount-info').innerText = `₹${parseFloat(amount).toFixed(2)}`;
+        }
+
+        function processPayment() {
+            document.getElementById('rec-no').innerText = 'REC-20261123-00' + currentPayingTicket.id;
+            document.getElementById('rec-plate').innerText = currentPayingTicket.plate;
+            document.getElementById('rec-offense').innerText = currentPayingTicket.offense;
+            document.getElementById('rec-amt').innerText = '₹' + parseFloat(currentPayingTicket.amount).toFixed(2);
+            document.getElementById('rec-mode').innerText = document.getElementById('pay-method').value;
+
+            document.getElementById('receipt-modal').classList.add('active');
+            document.getElementById('dash-rev-val').innerText = '₹1,000.00';
+            document.getElementById('dash-pend-val').innerText = '₹600.00';
+        }
+
+        function closeModal() {
+            document.getElementById('receipt-modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
